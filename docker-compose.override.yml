@@ -1,9 +1,20 @@
-# Local port override — host ports 5432 and 6379 may be occupied by other projects.
+# Local port override — host ports 5432/6379/80 may be occupied by other projects or system services.
+# !override replaces the ports array from docker-compose.yml entirely (requires Docker Compose >= 2.24 / v5.x).
+# Use !reset to clear a list; use !override to replace it with new values.
 # This remaps external ports only; internal container networking is unchanged.
+#
+# frontend target: Next.js 14 does not support next.config.ts (added in Next.js 15).
+# The production builder stage fails. Use the dev stage for local development.
 services:
   postgres:
-    ports:
+    ports: !override
       - "15432:5432"
   redis:
-    ports:
+    ports: !override
       - "16379:6379"
+  nginx:
+    ports: !override
+      - "8080:80"
+  frontend:
+    build:
+      target: dev

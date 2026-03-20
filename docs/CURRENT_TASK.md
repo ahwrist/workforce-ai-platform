@@ -31,6 +31,23 @@ Implement all Skills API endpoints so the 32 seeded canonical skills are queryab
 
 ---
 
+## Phase 1a Infra Blockers — COMPLETE (2026-03-20)
+
+**Assigned To**: Infrastructure Agent
+
+**Fixes delivered:**
+- `frontend/package-lock.json` — generated via `npm install`; required for `npm ci` in `Dockerfile.frontend`
+- `frontend/next.config.ts` → `frontend/next.config.mjs` — Next.js 14 does not support `.ts` config; renamed and converted to valid ESM
+- `docker-compose.override.yml` — corrected from `!reset` (clears list) to `!override` (replaces list) for postgres/redis port remapping; added nginx port remap (`8080:80`) to resolve host port 80 conflict; added `frontend.build.target: dev` to use the dev stage instead of failing production builder
+- `Makefile` `test-backend` — fixed path `backend/tests/` → `tests/` (container working directory is `/app` = `./backend`)
+
+**Verified:**
+- `docker compose ps` — all 7 services running (postgres healthy, redis, qdrant, api, worker, frontend, nginx)
+- `docker compose exec api pytest tests/ -v --tb=short` — 21 passed
+- `make health` — API, Qdrant, Redis all respond; no ❌ lines
+
+---
+
 ## Previous Phase: Phase 1a — Foundation — COMPLETE (2026-03-20)
 
 ---

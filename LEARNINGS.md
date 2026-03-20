@@ -76,7 +76,7 @@
 ### [DATABASE AGENT] [2026-03-20] — Host Port Conflicts Prevent `make up` (ports 5432 and 6379)
 
 **Area**: infra
-**Status**: WORKAROUND
+**Status**: RESOLVED
 **Severity**: HIGH
 
 **What I tried**: `make up` and `docker compose up -d postgres redis qdrant api worker`.
@@ -93,10 +93,78 @@ For a permanent fix, the Infrastructure Agent should either: (a) update `docker-
 
 ---
 
+### [INFRA AGENT] [2026-03-20] — `!reset` vs `!override` in Docker Compose v5 Port Remapping
+
+**Area**: infra
+**Status**: RESOLVED
+**Severity**: HIGH
+
+**What I tried**: Used `ports: !reset` in `docker-compose.override.yml` to replace the port array from the base compose file.
+
+**What happened**: `!reset` cleared the ports entirely — the merged config showed no ports at all for postgres and redis, so the containers started without any host port bindings (neither the original 5432 nor the new 15432).
+
+**Root Cause**: In Docker Compose v5, `!reset` resets a value to null/empty (clears the list). `!override` is the correct tag to replace a list with new values. This differs from some older docs that conflate the two.
+
+**Resolution / Workaround**: Changed `ports: !reset` to `ports: !override` in `docker-compose.override.yml`. Verified via `docker compose config` that postgres shows only `15432:5432` and redis shows only `16379:6379` (not both the original and remapped ports).
+
+**Future Risk**: Any agent editing the override file should test with `docker compose config` and grep for port numbers to confirm only the intended bindings appear. Both `!reset` and `!override` are silent — they won't error if misused.
+
+---
+
+### [INFRA AGENT] [2026-03-20] — Port 80 Conflict Blocks nginx at `make up`
+
+**Area**: infra
+**Status**: RESOLVED
+**Severity**: HIGH
+
+**What I tried**: `docker compose up -d` after resolving postgres/redis port conflicts.
+
+**What happened**: `Error response from daemon: ports are not available: exposing port TCP 0.0.0.0:80` — port 80 is bound by a system-level listener on this machine (not a Docker container).
+
+**Root Cause**: Multi-project dev environment; something binds port 80 at the system level. Verified with `netstat -an | grep "\.80 "` — shows `*.80 LISTEN`.
+
+**Resolution / Workaround**: Added nginx to `docker-compose.override.yml` with `ports: !override ["8080:80"]`. nginx now serves on host port 8080 locally. Update: `make up` message in Makefile still says `http://localhost:3000` but the actual local URL is `http://localhost:8080`. A future infrastructure pass should update the Makefile echo message.
+
+**Future Risk**: The Makefile `up` target echoes `Frontend: http://localhost:3000` but this is only correct in environments where port 80 is free (nginx proxies port 80→3000 internally). On this machine, the URL is `http://localhost:8080`.
+
+---
+
+### [INFRA AGENT] [2026-03-20] — `next.config.ts` Unsupported in Next.js 14 (Blocks Frontend Container)
+
+**Area**: frontend | infra
+**Status**: RESOLVED
+**Severity**: HIGH
+
+**What I tried**: `docker compose up -d --build frontend` with the `dev` target (to avoid the production builder failing).
+
+**What happened**: Even the `next dev` command failed: `Error: Configuring Next.js via 'next.config.ts' is not supported. Please replace the file with 'next.config.js' or 'next.config.mjs'.`
+
+**Root Cause**: TypeScript config files for Next.js (`next.config.ts`) were introduced in Next.js 15. The project uses Next.js 14.2.15, which only supports `next.config.js` or `next.config.mjs`. The scaffold was written with the newer convention.
+
+**Resolution / Workaround**: Renamed `frontend/next.config.ts` → `frontend/next.config.mjs`. Removed the TypeScript `import type { NextConfig }` and `: NextConfig` annotation; kept all config values identical. Frontend container now starts and runs `next dev` successfully.
+
+**Future Risk**: If the project upgrades to Next.js 15+, `next.config.mjs` will continue to work (Next.js 15 supports both). No action needed on upgrade.
+
+---
+
+### [INFRA AGENT] [2026-03-20] — `make test-backend` Path Wrong Inside Container [RESOLVED]
+
+**Area**: testing
+**Status**: RESOLVED
+**Severity**: MEDIUM
+
+**What I tried**: Confirmed the Database Agent's finding — `make test-backend` called `pytest backend/tests/` which fails inside the container since `/app` IS the backend directory.
+
+**Root Cause**: See prior Database Agent entry. Makefile used the host-relative path instead of the container-relative path.
+
+**Resolution / Workaround**: Updated Makefile line 84: `pytest backend/tests/` → `pytest tests/`. Verified: 21 tests pass (11 original model tests + 10 new API tests added by Database Agent).
+
+---
+
 ### [DATABASE AGENT] [2026-03-20] — `make test-backend` Path Wrong Inside Container
 
 **Area**: testing
-**Status**: OPEN
+**Status**: RESOLVED
 **Severity**: MEDIUM
 
 **What I tried**: `make test-backend` runs `docker compose exec api pytest backend/tests/ -v --tb=short`.

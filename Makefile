@@ -81,7 +81,7 @@ test:
 	@echo "✅ All tests complete."
 
 test-backend:
-	docker compose exec api pytest backend/tests/ -v --tb=short
+	docker compose exec api pytest tests/ -v --tb=short
 
 test-frontend:
 	docker compose exec frontend npm run test
