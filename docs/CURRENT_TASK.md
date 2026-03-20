@@ -1,11 +1,37 @@
 # CURRENT_TASK.md
 
-## Phase: Phase 1a — Foundation
-## Epic: Database Models & Migrations
+## Phase: Phase 1b — Skills API
+## Epic: Skills & Domains Endpoints (Epic 1.5)
 ## Status: COMPLETE
-## Assigned To: Database Agent
+## Assigned To: API Agent
 ## Started: 2026-03-20
 ## Completed: 2026-03-20
+
+---
+
+## Objective
+Implement all Skills API endpoints so the 32 seeded canonical skills are queryable via REST.
+
+## Acceptance Criteria
+- [x] GET /api/v1/skills/ returns 200 with 32 seeded skills, paginated (cursor-based)
+- [x] GET /api/v1/domains/ returns 200 with all 6 domains and correct skill counts
+- [x] GET /api/v1/skills/{valid-id} returns 200; GET /api/v1/skills/{bad-id} returns 404 with error envelope
+- [x] GET /api/v1/skills/trending returns 200 (empty list acceptable — no harvested postings yet)
+- [x] 21 tests pass (11 pre-existing + 10 new in test_skills_api.py)
+- [x] `make migrate` still runs cleanly — no new migrations added
+
+## Files Modified
+- `backend/api/schemas/skills.py` — added PaginatedSkills, TrendingSkillItem, DomainResponse
+- `backend/api/routers/skills.py` — implemented all 3 skills endpoints
+- `backend/api/routers/domains.py` — new file, GET /api/v1/domains/ with taxonomy.yaml labels
+- `backend/main.py` — registered domains router
+- `backend/tests/test_skills_api.py` — new file, 10 API-level tests
+- `backend/tests/conftest.py` — new file, session-scoped event loop fixture
+- `backend/pyproject.toml` — added asyncio_default_fixture_loop_scope = "session"
+
+---
+
+## Previous Phase: Phase 1a — Foundation — COMPLETE (2026-03-20)
 
 ---
 

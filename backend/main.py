@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.routers import skills, survey, auth, admin
+from api.routers import domains
 from core.config.settings import get_settings
 from core.config.logging import configure_logging
 from core.database.qdrant import ensure_collections
@@ -41,6 +42,7 @@ app.add_middleware(
 )
 
 app.include_router(skills.router)
+app.include_router(domains.router)
 app.include_router(survey.router)
 app.include_router(auth.router)
 app.include_router(admin.router)
