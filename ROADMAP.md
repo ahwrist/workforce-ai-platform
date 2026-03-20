@@ -62,14 +62,14 @@ Launch a credible public presence with three working surfaces: consulting pages,
 - 🔲 **SEO Foundation**: `generateMetadata` on all pages, `robots.txt`, `sitemap.xml` via `next-sitemap`, OG image template
 - 🔲 **Blog Shell**: MDX pipeline configured, one seed article published
 
-### Epic 1.2 — Harvester Agent (MVP)
+### Epic 1.2 — Harvester Agent (MVP) ✅ COMPLETE (2026-03-20)
 
-- 🔲 Target company list defined in `agents/harvester/sources.py`: minimum 20 frontier tech companies across Greenhouse, Lever, and direct career pages
-- 🔲 `scraper.py`: Async scraping with `httpx` + `BeautifulSoup`, respects `robots.txt`, exponential backoff on 429/503
-- 🔲 Deduplication: URL-level dedup before inserting to `job_postings`
-- 🔲 `scheduler.py`: APScheduler cron job running harvest every 24 hours
-- 🔲 Admin endpoint (`POST /api/v1/admin/harvest/trigger`) for manual triggering (API-key protected)
-- 🔲 Harvester logs run summary to structured log (postings found, new, skipped, errors)
+- ✅ Target company list defined in `agents/harvester/sources.py`: 24 companies across Greenhouse (14), Lever (7), and HTML (3)
+- ✅ `scraper.py`: Async scraping with `httpx` + `BeautifulSoup`, respects `robots.txt`, exponential backoff on 429/503
+- ✅ Deduplication: URL-level dedup before inserting to `job_postings`
+- ✅ `scheduler.py`: APScheduler cron job dispatching Celery tasks (harvest 2 AM, synthesize 4 AM, classify 6 AM UTC)
+- ✅ Admin endpoint (`POST /api/v1/admin/harvest/trigger`) for manual triggering (API-key protected)
+- ✅ Harvester logs run summary to structured log (postings found, new, skipped, errors)
 
 ### Epic 1.3 — Synthesizer Agent (MVP)
 

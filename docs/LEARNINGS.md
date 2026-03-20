@@ -63,3 +63,50 @@ and in local development.
 Used base64-encoded integer offset (not keyset pagination). This is simpler and sufficient for an
 MVP with 32–hundreds of skills. If the skill table grows to tens of thousands, consider switching
 to keyset pagination on `(canonical_name, id)` for stable ordering under concurrent inserts.
+
+---
+
+## Phase 1c — Synthesizer Agent / Pipeline Agent (2026-03-20)
+
+### Patching a lazily-imported function in tests
+`run_extraction()` called `from agents.synthesizer.embedder import embed_and_store` inside the
+function body to avoid circular imports. This made the name unavailable at module level, so
+`patch("agents.synthesizer.extractor.embed_and_store")` raised `AttributeError`.
+Fix: move the import to module level (no circular import exists since embedder does not import
+extractor). The patchable attribute is then `agents.synthesizer.extractor.embed_and_store`.
+
+### pg_insert on_conflict_do_nothing — always query back for the ID
+After `pg_insert(...).on_conflict_do_nothing()`, the RETURNING clause is suppressed and the
+execute result has no `inserted_primary_key`. Always follow with an explicit `SELECT` on the
+unique column to retrieve the ID whether the row was inserted or already existed.
+
+---
+
+## Phase 1b — Harvester Agent / Pipeline Agent (2026-03-20)
+
+### Scheduler must dispatch Celery tasks, not call agents directly
+The original `scheduler.py` stub referenced `pipelines.skill_pipeline:harvest_new_postings` as a
+string, which APScheduler would interpret as a dotted import path for a function. This would call
+the function inline in the scheduler process rather than dispatching it to the Celery worker.
+Fix: define thin `_dispatch_*()` functions that call `task.delay()` to properly enqueue the work.
+The scheduler process stays lightweight; the worker handles execution and retries.
+
+### robots.txt RobotFileParser requires pre-parsing
+`urllib.robotparser.RobotFileParser` must have `.parse()` called on it explicitly — setting
+`allow_all = True` on an instance is not a standard attribute, but it works as a sentinel we check
+in `_is_allowed()`. For parsed robots.txt content use `.parse(lines)`. For the "allow all" fallback
+(no robots.txt or fetch error) simply set `rp.allow_all = True` and guard in `_is_allowed()`.
+
+### Admin endpoint 503 vs 200 in tests
+When Celery broker (Redis) is unreachable in the test environment, `task.delay()` raises a
+connection error and the admin endpoint returns 503. The harvester tests only assert on the 403
+(bad key) and 422 (missing header) paths — they do not test the success 200 path — so tests pass
+regardless of whether Redis is available in CI. Document this: the 200 path is verified manually
+via `docker compose exec api` with a running Celery worker.
+
+### IntegrityError race condition in _insert_new_postings
+URL-level dedup via `SELECT ... WHERE url = $url` + `session.flush()` has a TOCTOU race window if
+multiple workers run concurrently. Guard with `except IntegrityError → rollback + skip` so the
+unique constraint on `job_postings.url` is the final arbiter. Always call `await session.rollback()`
+before continuing the loop after an IntegrityError — SQLAlchemy async sessions are not usable after
+an unhandled exception without a rollback.
