@@ -1,0 +1,91 @@
+# WorkforceAI Skill Taxonomy
+# Single source of truth for all domain/subdomain classifications
+# DO NOT modify without adding a rationale in LEARNINGS.md or PR description
+
+domains:
+  software_engineering:
+    label: "Software Engineering"
+    subdomains:
+      - backend_development
+      - frontend_development
+      - devops_platform
+      - mobile
+      - security
+    canonical_anchors:
+      - "Python"
+      - "TypeScript"
+      - "Kubernetes"
+      - "CI/CD"
+      - "REST APIs"
+      - "Docker"
+      - "PostgreSQL"
+
+  data_and_ai:
+    label: "Data & AI"
+    subdomains:
+      - machine_learning
+      - data_engineering
+      - analytics
+      - ai_agents
+      - mlops
+    canonical_anchors:
+      - "PyTorch"
+      - "LangChain"
+      - "dbt"
+      - "Apache Spark"
+      - "RAG"
+      - "LLMs"
+      - "Vector Databases"
+      - "Prompt Engineering"
+
+  product_management:
+    label: "Product Management"
+    subdomains:
+      - growth
+      - platform
+      - enterprise
+      - ai_product
+    canonical_anchors:
+      - "Product Roadmap"
+      - "A/B Testing"
+      - "PRD"
+      - "User Research"
+      - "Stakeholder Management"
+
+  design_and_ux:
+    label: "Design & UX"
+    subdomains:
+      - product_design
+      - design_systems
+      - research
+    canonical_anchors:
+      - "Figma"
+      - "User Testing"
+      - "Design Systems"
+      - "Prototyping"
+
+  go_to_market:
+    label: "Go-to-Market"
+    subdomains:
+      - marketing
+      - sales
+      - partnerships
+      - developer_relations
+    canonical_anchors:
+      - "Content Marketing"
+      - "SEO"
+      - "CRM"
+      - "Sales Enablement"
+
+  operations:
+    label: "Operations"
+    subdomains:
+      - finance
+      - legal
+      - hr_people
+      - strategy
+    canonical_anchors:
+      - "Financial Modeling"
+      - "Compliance"
+      - "OKRs"
+      - "Recruiting"

@@ -35,7 +35,97 @@
 
 ## Log Entries
 
-*(No entries yet. This file is initialized at project start. The first agent to encounter a failure mode should add the first entry below this line.)*
+---
+
+### [DATABASE AGENT] [2026-03-20] — Alembic env.py Used Wrong Dialect for Async Engine
+
+**Area**: database
+**Status**: RESOLVED
+**Severity**: BLOCKER
+
+**What I tried**: Ran `alembic upgrade head` inside the api container.
+
+**What happened**: `asyncpg.exceptions._base.InterfaceError: cannot perform operation` — Alembic connected to postgres using the psycopg2 URL but then passed it to `async_engine_from_config`, which requires asyncpg.
+
+**Root Cause**: `data/migrations/env.py` replaced `+asyncpg` with `+psycopg2` in the DATABASE_URL before setting it on the config, then called `async_engine_from_config` which requires an async dialect. psycopg2 is sync-only and cannot be used with the async engine path.
+
+**Resolution / Workaround**: Removed the URL conversion. The asyncpg URL is kept as-is; `async_engine_from_config` + `run_sync` is the correct Alembic async migration pattern. psycopg2-binary remains in requirements.txt for other potential sync uses but is not used by Alembic.
+
+**Future Risk**: If someone adds a sync Alembic migration path (e.g. for offline migrations), they will need to add the URL conversion back in that branch only — not for the online async path.
+
+---
+
+### [DATABASE AGENT] [2026-03-20] — langchain Version Conflict in requirements.txt
+
+**Area**: backend
+**Status**: RESOLVED
+**Severity**: BLOCKER
+
+**What I tried**: Built the api and worker Docker images.
+
+**What happened**: `pip install` failed: `langchain-community==0.3.4` requires `langchain>=0.3.6` but `langchain==0.3.4` was pinned.
+
+**Root Cause**: The Infrastructure Agent pinned `langchain==0.3.4` but `langchain-community==0.3.4` was released after `langchain` bumped to 0.3.6.
+
+**Resolution / Workaround**: Updated `langchain==0.3.4` → `langchain==0.3.6` in `backend/requirements.txt`.
+
+**Future Risk**: Pin `langchain` and `langchain-community` to a compatible pair. When upgrading either, check the other's minimum requirement.
+
+---
+
+### [DATABASE AGENT] [2026-03-20] — Host Port Conflicts Prevent `make up` (ports 5432 and 6379)
+
+**Area**: infra
+**Status**: WORKAROUND
+**Severity**: HIGH
+
+**What I tried**: `make up` and `docker compose up -d postgres redis qdrant api worker`.
+
+**What happened**: Both `5432` (postgres) and `6379` (redis) are bound by containers from other projects on this machine (`snapcount_postgres` and `route-intel-redis`). Docker refused to start the workforce-ai-platform containers with those port bindings.
+
+**Root Cause**: Multi-project dev environment with port conflicts. docker-compose.yml binds postgres on 5432 and redis on 6379 without alternatives.
+
+**Resolution / Workaround**: Started postgres and redis containers manually via `docker run` on `workforce-ai-platform_platform-net` without host port bindings (internal container networking is unaffected). A `docker-compose.override.yml` was created to remap ports (`15432:5432`, `16379:6379`) but Docker Compose merges rather than replaces port arrays, so it didn't resolve the conflict in this session.
+
+For a permanent fix, the Infrastructure Agent should either: (a) update `docker-compose.override.yml` to use unique external ports for this project, or (b) document the port conflict in project setup docs.
+
+**Future Risk**: Every developer on a multi-project machine will hit this. The override file approach requires Docker Compose ≥ 2.x YAML merge behavior to be well understood.
+
+---
+
+### [DATABASE AGENT] [2026-03-20] — `make test-backend` Path Wrong Inside Container
+
+**Area**: testing
+**Status**: OPEN
+**Severity**: MEDIUM
+
+**What I tried**: `make test-backend` runs `docker compose exec api pytest backend/tests/ -v --tb=short`.
+
+**What happened**: `ERROR: file or directory not found: backend/tests/` — exit code 4, no tests collected.
+
+**Root Cause**: The api container mounts `./backend` at `/app`. So inside the container, the working directory `/app` IS the backend. The correct pytest path is `tests/` not `backend/tests/`.
+
+**Resolution / Workaround**: Ran tests directly as `pytest tests/ -v --tb=short` — all 11 tests pass. The Makefile `test-backend` target needs to be updated by the Infrastructure Agent to use `tests/` instead of `backend/tests/`.
+
+**Future Risk**: Anyone running `make test-backend` will get a false "0 tests ran" result with exit code 4. CI pipelines that rely on this make target will silently pass without running any tests.
+
+---
+
+### [DATABASE AGENT] [2026-03-20] — pytest-asyncio Module-Scoped Fixture Event Loop Clash
+
+**Area**: testing
+**Status**: RESOLVED
+**Severity**: MEDIUM
+
+**What I tried**: Used a `scope="module"` async fixture to share one DB session across all model tests.
+
+**What happened**: `asyncpg.exceptions._base.InterfaceError: cannot perform operation: another operation is in progress` — the module-scoped fixture's connection was created on a different event loop than the per-function test loops.
+
+**Root Cause**: `pytest-asyncio` with `asyncio_mode = "auto"` creates a new event loop per test function by default. A module-scoped async fixture is created on a different loop than the test functions that use it.
+
+**Resolution / Workaround**: Replaced the shared session fixture with a `_make_session()` helper that creates a fresh engine + session per test. Each test is fully self-contained with its own engine/session/event-loop lifecycle.
+
+**Future Risk**: If test suite grows and DB setup time becomes a bottleneck, consider using `pytest-asyncio`'s `loop_scope` config or a session-scoped event loop — but verify compatibility with the installed pytest-asyncio version (0.24.0).
 
 ---
 

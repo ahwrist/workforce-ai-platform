@@ -1,0 +1,9 @@
+# Local port override — host ports 5432 and 6379 may be occupied by other projects.
+# This remaps external ports only; internal container networking is unchanged.
+services:
+  postgres:
+    ports:
+      - "15432:5432"
+  redis:
+    ports:
+      - "16379:6379"
